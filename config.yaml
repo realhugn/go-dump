@@ -1,0 +1,12 @@
+chunk_size: 100000
+db_user: changme
+db_password: changme
+db_host: changme
+db_port: changme
+db_name: changme
+table_name: my_table
+columns:
+    - column1
+    - column2
+    - culumn3
+output_dir: dumps
