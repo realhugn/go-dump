@@ -15,6 +15,10 @@ Currently, the Go Dump Tool supports dumping data from PostgreSQL databases to C
 - Customizable configuration
 - Easy to use
 
+## Demo
+
+![Example](./demo/example.svg)
+
 ## Installation
 
 To install the Go Dump Tool, follow these steps:
@@ -59,6 +63,7 @@ tables:
     - name: changeme
       columns: [] # If not specified, then select all columns
       output_dir: changeme
+concurrently: true # If true, data will be dumped concurrently. Else, synchronously.
 ```
 
 Adjust these values according to your database configuration and requirements.
