@@ -1,12 +1,12 @@
-# Go Dump Tool
+# Go-Dumper
 
 ## Overview
 
-The Go Dump Tool is a utility designed to facilitate the extraction and dumping of data from a database into CSV files. 
+The Go-Dumper is a utility designed to facilitate the extraction and dumping of data from a database into CSV files. 
 
 ## Supported Databases
 
-Currently, the Go Dump Tool supports dumping data from PostgreSQL databases to CSV files.
+Currently, the Go-Dumper supports dumping data from PostgreSQL databases to CSV files.
 
 ## Features
 
@@ -21,7 +21,7 @@ Currently, the Go Dump Tool supports dumping data from PostgreSQL databases to C
 
 ## Installation
 
-To install the Go Dump Tool, follow these steps:
+To install the Go-Dumper, follow these steps:
 
 1. Clone the repository:
     ```sh
@@ -38,7 +38,7 @@ To install the Go Dump Tool, follow these steps:
 
 ## Usage
 
-To use the Go Dump Tool, run the following command:
+To use the Go-Dumper, run the following command:
 ```sh
 ./go-dump --config /path/to/config.yaml
 ```
