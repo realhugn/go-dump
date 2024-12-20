@@ -1,12 +1,13 @@
 chunk_size: 100000
-db_user: changme
-db_password: changme
-db_host: changme
-db_port: changme
-db_name: changme
-table_name: my_table
-columns:
-    - column1
-    - column2
-    - culumn3
-output_dir: dumps
+db_user: changeme
+db_password: changeme
+db_host: changeme
+db_port: changeme
+db_name: changeme
+tables:
+    - name: changeme
+      columns: []
+      output_dir: data_dumps/
+    - name: changeme
+      columns: []
+      output_dir: data_dumps/

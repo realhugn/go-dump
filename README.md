@@ -2,17 +2,17 @@
 
 ## Overview
 
-The Go Dump Tool is a utility designed to facilitate the extraction and dumping of data from a database into csv files. 
+The Go Dump Tool is a utility designed to facilitate the extraction and dumping of data from a database into CSV files. 
 
 ## Supported Databases
 
 Currently, the Go Dump Tool supports dumping data from PostgreSQL databases to CSV files.
+
 ## Features
 
 - Efficient data extraction
 - Chunking to reduce memory usage
 - Customizable configuration
-- Supports multiple database types
 - Easy to use
 
 ## Installation
@@ -47,18 +47,18 @@ Customize the tool by setting the following parameters in a `config.yaml` file:
 
 ```yaml
 chunk_size: 100000
-db_user: changme
-db_password: changme
-db_host: changme
-db_port: changme
-db_name: changme
-table_name: my_table
-columns:
-    - id
-    - column1
-    - column2
-    - culumn3
-output_dir: dumps
+db_user: changeme
+db_password: changeme
+db_host: changeme
+db_port: changeme
+db_name: changeme
+tables:
+    - name: changeme
+      columns: [] # If not specified, then select all columns
+      output_dir: changeme
+    - name: changeme
+      columns: [] # If not specified, then select all columns
+      output_dir: changeme
 ```
 
 Adjust these values according to your database configuration and requirements.

@@ -8,22 +8,28 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	_ "github.com/lib/pq"
-	"github.com/schollz/progressbar/v3"
+	"github.com/vbauerster/mpb"
+	"github.com/vbauerster/mpb/decor"
 	"gopkg.in/yaml.v2"
 )
 
+type TableConfig struct {
+	Name      string   `yaml:"name"`
+	Columns   []string `yaml:"columns"`
+	OutputDir string   `yaml:"output_dir"`
+}
+
 type Config struct {
-	DBUser     string   `yaml:"db_user"`
-	DBPassword string   `yaml:"db_password"`
-	DBHost     string   `yaml:"db_host"`
-	DBPort     int      `yaml:"db_port"`
-	DBName     string   `yaml:"db_name"`
-	TableName  string   `yaml:"table_name"`
-	Columns    []string `yaml:"columns"`
-	ChunkSize  int      `yaml:"chunk_size"`
-	OutputDir  string   `yaml:"output_dir"`
+	DBUser     string        `yaml:"db_user"`
+	DBPassword string        `yaml:"db_password"`
+	DBHost     string        `yaml:"db_host"`
+	DBPort     int           `yaml:"db_port"`
+	DBName     string        `yaml:"db_name"`
+	Tables     []TableConfig `yaml:"tables"`
+	ChunkSize  int           `yaml:"chunk_size"`
 }
 
 func writeChunkToCSV(records [][]string, chunkNum int, headers []string, tableName, outputDir string) error {
@@ -48,43 +54,50 @@ func writeChunkToCSV(records [][]string, chunkNum int, headers []string, tableNa
 	return writer.WriteAll(records)
 }
 
-func main() {
-	configPath := flag.String("config", "config.yaml", "Path to the config file")
-	flag.Parse()
+func processTable(db *sql.DB, config Config, table TableConfig, wg *sync.WaitGroup, p *mpb.Progress) {
+	defer wg.Done()
 
-	configFile, err := os.ReadFile(*configPath)
-	if err != nil {
-		panic("Error reading config file")
+	var headers []string
+	if len(table.Columns) == 0 {
+		// Get all columns if not specified
+		rows, err := db.Query(fmt.Sprintf("SELECT column_name FROM information_schema.columns WHERE table_name='%s'", table.Name))
+		if err != nil {
+			panic(err)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var columnName string
+			if err := rows.Scan(&columnName); err != nil {
+				panic(err)
+			}
+			headers = append(headers, columnName)
+		}
+	} else {
+		headers = table.Columns
 	}
 
-	var config Config
-	err = yaml.Unmarshal(configFile, &config)
-	if err != nil {
-		fmt.Println(err)
-		panic("Error parsing config file")
-	}
-
-	db, err := sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", config.DBUser, config.DBPassword, config.DBHost, config.DBPort, config.DBName))
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-
-	// Get total count
-	var totalCount int
-	err = db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s", config.TableName)).Scan(&totalCount)
-	if err != nil {
-		panic(err)
-	}
-
-	headers := config.Columns
 	quotedHeaders := make([]string, len(headers))
 	for i, header := range headers {
 		quotedHeaders[i] = fmt.Sprintf(`"%s"`, header)
 	}
-	query := fmt.Sprintf("SELECT %s FROM %s OFFSET $1 LIMIT $2", strings.Join(quotedHeaders, ","), config.TableName)
+	query := fmt.Sprintf("SELECT %s FROM %s OFFSET $1 LIMIT $2", strings.Join(quotedHeaders, ","), table.Name)
 
-	bar := progressbar.Default(int64(totalCount))
+	// Get total count
+	var totalCount int
+	err := db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s", table.Name)).Scan(&totalCount)
+	if err != nil {
+		panic(err)
+	}
+
+	bar := p.AddBar(int64(totalCount),
+		mpb.PrependDecorators(
+			decor.Name(fmt.Sprintf("Processing %s: ", table.Name)),
+			decor.CountersNoUnit("%d / %d"),
+		),
+		mpb.AppendDecorators(decor.Percentage()),
+	)
+
 	offset := 0
 	chunkNum := 1
 
@@ -116,11 +129,11 @@ func main() {
 				}
 			}
 			chunk = append(chunk, row)
-			bar.Add(1)
+			bar.Increment()
 		}
 		rows.Close()
 
-		if err := writeChunkToCSV(chunk, chunkNum, headers, config.TableName, config.OutputDir); err != nil {
+		if err := writeChunkToCSV(chunk, chunkNum, headers, table.Name, table.OutputDir); err != nil {
 			panic(err)
 		}
 
@@ -128,5 +141,38 @@ func main() {
 		chunkNum++
 	}
 
-	fmt.Printf("\nExported %d records to %s directory\n", totalCount, config.OutputDir)
+	fmt.Printf("\nExported %d records from %s to %s directory\n", totalCount, table.Name, table.OutputDir)
+}
+
+func main() {
+	configPath := flag.String("config", "config.yaml", "Path to the config file")
+	flag.Parse()
+
+	configFile, err := os.ReadFile(*configPath)
+	if err != nil {
+		panic("Error reading config file")
+	}
+
+	var config Config
+	err = yaml.Unmarshal(configFile, &config)
+	if err != nil {
+		fmt.Println(err)
+		panic("Error parsing config file")
+	}
+
+	db, err := sql.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", config.DBUser, config.DBPassword, config.DBHost, config.DBPort, config.DBName))
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	var wg sync.WaitGroup
+	p := mpb.New(mpb.WithWaitGroup(&wg))
+
+	for _, table := range config.Tables {
+		wg.Add(1)
+		go processTable(db, config, table, &wg, p)
+	}
+	wg.Wait()
+	p.Wait()
 }
