@@ -21,7 +21,7 @@ To install the Go Dump Tool, follow these steps:
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/nothung209/go-dump.git
+    git clone https://github.com/realhugn/go-dump.git
     ```
 2. Navigate to the project directory:
     ```sh
