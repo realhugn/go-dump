@@ -11,3 +11,4 @@ tables:
     - name: changeme
       columns: []
       output_dir: data_dumps/
+concurrently: true

@@ -23,13 +23,14 @@ type TableConfig struct {
 }
 
 type Config struct {
-	DBUser     string        `yaml:"db_user"`
-	DBPassword string        `yaml:"db_password"`
-	DBHost     string        `yaml:"db_host"`
-	DBPort     int           `yaml:"db_port"`
-	DBName     string        `yaml:"db_name"`
-	Tables     []TableConfig `yaml:"tables"`
-	ChunkSize  int           `yaml:"chunk_size"`
+	DBUser       string        `yaml:"db_user"`
+	DBPassword   string        `yaml:"db_password"`
+	DBHost       string        `yaml:"db_host"`
+	DBPort       int           `yaml:"db_port"`
+	DBName       string        `yaml:"db_name"`
+	Tables       []TableConfig `yaml:"tables"`
+	ChunkSize    int           `yaml:"chunk_size"`
+	Concurrently bool          `yaml:"concurrently"`
 }
 
 func writeChunkToCSV(records [][]string, chunkNum int, headers []string, tableName, outputDir string) error {
@@ -166,13 +167,22 @@ func main() {
 	}
 	defer db.Close()
 
-	var wg sync.WaitGroup
-	p := mpb.New(mpb.WithWaitGroup(&wg))
+	p := mpb.New()
 
-	for _, table := range config.Tables {
-		wg.Add(1)
-		go processTable(db, config, table, &wg, p)
+	if config.Concurrently {
+		var wg sync.WaitGroup
+		p = mpb.New(mpb.WithWaitGroup(&wg))
+
+		for _, table := range config.Tables {
+			wg.Add(1)
+			go processTable(db, config, table, &wg, p)
+		}
+		wg.Wait()
+	} else {
+		for _, table := range config.Tables {
+			processTable(db, config, table, nil, p)
+		}
 	}
-	wg.Wait()
+
 	p.Wait()
 }
