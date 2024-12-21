@@ -67,3 +67,6 @@ concurrently: true # If true, data will be dumped concurrently. Else, synchronou
 ```
 
 Adjust these values according to your database configuration and requirements.
+## License
+
+This project is licensed under the [MIT License](./LICENSE)
